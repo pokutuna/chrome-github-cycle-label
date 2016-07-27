@@ -1,0 +1,23 @@
+{
+    "manifest_version": 2,
+
+    "name": "cycle-label",
+    "version": "generate by 'manifesft' gulp task",
+    "description": "",
+
+    "background": {
+        "scripts": ["js/background.js"],
+        "persistent": false
+    },
+    "options_page": "html/options.html",
+    "permissions": [
+        "http://*/*",
+        "https://*/*",
+        "tabs"
+    ],
+    "icons": {
+        "16":  "img/cycle-label16.png",
+        "48":  "img/cycle-label48.png",
+        "128": "img/cycle-label128.png"
+    }
+}
