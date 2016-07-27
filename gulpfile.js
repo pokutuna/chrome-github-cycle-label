@@ -2,8 +2,8 @@ var gulp       = require('gulp'),
     tsify      = require('tsify'),
     browserify = require('browserify'),
     editJson   = require('gulp-json-editor'),
-    less       = require('gulp-less'),
-    jade       = require('gulp-jade'),
+    sass       = require('gulp-sass'),
+    pug        = require('gulp-pug'),
     zip        = require('gulp-zip'),
     source     = require('vinyl-source-stream'),
     path       = require('path'),
@@ -35,15 +35,15 @@ for (let t of targets) {
 }
 gulp.task('typescript', gulp.parallel(targets.map(t => `${t.name}-browserify`)));
 
-gulp.task('less', () => {
-    return gulp.src('src/**/*.less')
-        .pipe(less())
+gulp.task('sass', () => {
+    return gulp.src('src/**/*.scss')
+        .pipe(sass().on('error', sass.logError))
         .pipe(gulp.dest('app/css'));
 });
 
-gulp.task('jade', () => {
-    return gulp.src('src/**/*.jade')
-        .pipe(jade({ pretty: true }))
+gulp.task('pug', () => {
+    return gulp.src('src/**/*.pug')
+        .pipe(pug({ pretty: true }))
         .pipe(gulp.dest('app/html'));
 });
 
@@ -74,7 +74,7 @@ function version() {
     });
 }
 
-gulp.task('build', gulp.parallel(['typescript', 'less', 'jade', 'img', 'manifest']));
+gulp.task('build', gulp.parallel(['typescript', 'sass', 'pug', 'img', 'manifest']));
 
 gulp.task('zip', () => {
     return version().then(function(version) {
@@ -88,8 +88,8 @@ gulp.task('package', gulp.series('build', 'zip'));
 
 gulp.task('watch', () => {
     gulp.watch('src/**/*.ts',       gulp.parallel(['typescript']));
-    gulp.watch('src/**/*.less',     gulp.parallel(['less']));
-    gulp.watch('src/**/*.jade',     gulp.parallel(['jade']));
+    gulp.watch('src/**/*.scss',     gulp.parallel(['sass']));
+    gulp.watch('src/**/*.pug',      gulp.parallel(['pug']));
     gulp.watch('src/manifest.json', gulp.parallel(['manifest']));
 });
 
