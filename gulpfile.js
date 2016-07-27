@@ -5,6 +5,7 @@ var gulp       = require('gulp'),
     sass       = require('gulp-sass'),
     pug        = require('gulp-pug'),
     zip        = require('gulp-zip'),
+    gutil      = require('gulp-util'),
     source     = require('vinyl-source-stream'),
     path       = require('path'),
     exec       = require('child_process').exec,
@@ -29,6 +30,10 @@ for (let t of targets) {
         return browserify(t.entry, { debug: true })
             .plugin('tsify', { noImplititAny: true })
             .bundle()
+            .on('error', function(err) {
+                gutil.log(err.toString());
+                this.emit('end');
+            })
             .pipe(source(path.basename(t.entry).replace(/\.ts$/, '.js')))
             .pipe(gulp.dest('app/js'));
     });
@@ -48,7 +53,7 @@ gulp.task('pug', () => {
 });
 
 gulp.task('img', () => {
-    return gulp.src('src/img/sized/*.png')
+    return gulp.src('src/img/*')
         .pipe(gulp.dest('app/img'));
 });
 
@@ -90,6 +95,7 @@ gulp.task('watch', () => {
     gulp.watch('src/**/*.ts',       gulp.parallel(['typescript']));
     gulp.watch('src/**/*.scss',     gulp.parallel(['sass']));
     gulp.watch('src/**/*.pug',      gulp.parallel(['pug']));
+    gulp.watch('src/img/*',         gulp.parallel(['img']));
     gulp.watch('src/manifest.json', gulp.parallel(['manifest']));
 });
 

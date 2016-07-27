@@ -13,7 +13,8 @@
     "permissions": [
         "http://*/*",
         "https://*/*",
-        "tabs"
+        "tabs",
+        "storage"
     ],
     "icons": {
         "16":  "img/cycle-label16.png",
