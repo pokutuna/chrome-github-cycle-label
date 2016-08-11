@@ -1,15 +1,60 @@
 var gulp       = require('gulp'),
-    tsify      = require('tsify'),
     browserify = require('browserify'),
+    watchify   = require('watchify'),
+    tsify      = require('tsify'),
     editJson   = require('gulp-json-editor'),
     sass       = require('gulp-sass'),
     pug        = require('gulp-pug'),
     zip        = require('gulp-zip'),
+    logger     = require('gulp-logger'),
     gutil      = require('gulp-util'),
     source     = require('vinyl-source-stream'),
     path       = require('path'),
     exec       = require('child_process').exec,
     Promise    = require('es6-promise').Promise;
+
+function buildScript(entry, watch) {
+    let bundler = browserify({
+        entries: entry,
+        debug: true,
+        plugin: [tsify],
+        cache: {}, packageCache: {} // for watchify
+    });
+
+    function rebundle() {
+        return bundler
+            .bundle()
+            .on('error', function(error) {
+                gutil.log(error.toString());
+                this.emit('end');
+            })
+            .pipe(source(path.basename(entry).replace(/\.ts$/, '.js')))
+            .pipe(gulp.dest('app/js'))
+            .pipe(logger({ beforeEach: '[ts] wrote: ' }));
+    }
+
+    // watchify を有効にする
+    if (watch) {
+        // watchify は file イベントによって追加されたファイルの更新をすべて update イベントで
+        // 通知してしまう。 entry の依存に含まれるファイルの更新のみを検知して再生成したいため、
+        // watchify が内部で検出している依存関係を proxy して依存の有無を判定できるようにする。
+        let deps = {};
+        bundler._options.cache = new Proxy(bundler._options.cache, {
+            set: (cache, file, dep) => {
+                cache[file] = dep;
+                deps[file] = true;
+            }
+        });
+        bundler.on('reset', () => { deps = {}; });
+        bundler.on('update', (files) => {
+            if (files.some((file) => { return deps[file]; })) rebundle();
+        });
+
+        bundler.plugin(watchify);
+    }
+
+    return rebundle();
+}
 
 var targets = [
     {
@@ -26,42 +71,38 @@ var targets = [
     }
 ];
 for (let t of targets) {
-    gulp.task(`${t.name}-browserify`, () => {
-        return browserify(t.entry, { debug: true })
-            .plugin('tsify', { noImplititAny: true })
-            .bundle()
-            .on('error', function(err) {
-                gutil.log(err.toString());
-                this.emit('end');
-            })
-            .pipe(source(path.basename(t.entry).replace(/\.ts$/, '.js')))
-            .pipe(gulp.dest('app/js'));
-    });
+    gulp.task(`${t.name}-browserify`, () => { return buildScript(t.entry, false); });
+    gulp.task(`${t.name}-watchify`,   () => { return buildScript(t.entry, true);  });
 }
 gulp.task('typescript', gulp.parallel(targets.map(t => `${t.name}-browserify`)));
+gulp.task('typescript:watch', gulp.parallel(targets.map(t => `${t.name}-watchify`)));
 
 gulp.task('sass', () => {
     return gulp.src('src/**/*.scss')
         .pipe(sass().on('error', sass.logError))
-        .pipe(gulp.dest('app/css'));
+        .pipe(gulp.dest('app/css'))
+        .pipe(logger({ beforeEach: '[scss] wrote: ' }));
 });
 
 gulp.task('pug', () => {
     return gulp.src('src/**/*.pug')
         .pipe(pug({ pretty: true }))
-        .pipe(gulp.dest('app/html'));
+        .pipe(gulp.dest('app/html'))
+        .pipe(logger({ beforeEach: '[pug] wrote: ' }));
 });
 
 gulp.task('img', () => {
     return gulp.src('src/img/*')
-        .pipe(gulp.dest('app/img'));
+        .pipe(gulp.dest('app/img'))
+        .pipe(logger({ beforeEach: '[img] wrote: ' }));
 });
 
 gulp.task('manifest', () => {
     return version().then(function(version) {
         return gulp.src('src/manifest.json')
             .pipe(editJson({ version : version }))
-            .pipe(gulp.dest('app/'));
+            .pipe(gulp.dest('app/'))
+            .pipe(logger({ beforeEach: '[manifest] wrote: ' }));
     });
 });
 function version() {
@@ -91,12 +132,10 @@ gulp.task('zip', () => {
 
 gulp.task('package', gulp.series('build', 'zip'));
 
-gulp.task('watch', () => {
-    gulp.watch('src/**/*.ts',       gulp.parallel(['typescript']));
+gulp.task('watch', gulp.parallel(['typescript:watch', () => {
     gulp.watch('src/**/*.scss',     gulp.parallel(['sass']));
     gulp.watch('src/**/*.pug',      gulp.parallel(['pug']));
-    gulp.watch('src/img/*',         gulp.parallel(['img']));
     gulp.watch('src/manifest.json', gulp.parallel(['manifest']));
-});
+}]));
 
 gulp.task('default', gulp.series('build', 'watch'));

@@ -16,6 +16,7 @@
     "es6-promise": "^2.0.1",
     "gulp": "github:gulpjs/gulp#4.0",
     "gulp-json-editor": "^2.2.1",
+    "gulp-logger": "0.0.2",
     "gulp-pug": "^3.0.3",
     "gulp-sass": "^2.3.2",
     "gulp-util": "^3.0.7",
