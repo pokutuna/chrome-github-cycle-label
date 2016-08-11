@@ -2,9 +2,10 @@ import { LabelEditorView } from './components/LabelEditor'
 
 console.log('content.ts');
 
-let sidebar = document.querySelector('.discussion-sidebar.js-sticky');
-if (sidebar) new LabelEditorView(sidebar);
+let sidebar = document.querySelector('#partial-discussion-sidebar');
+if (sidebar) new LabelEditorView(sidebar.parentElement);
 
+// const form = <HTMLFormElement>document.querySelector('.js-issue-sidebar-form');
 // let inputs = Array.prototype.slice.call(form.querySelectorAll('input'));
 // let params = inputs.map((i: HTMLInputElement) => {
 //     return [i.name, i.value];
