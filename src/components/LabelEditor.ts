@@ -13,7 +13,8 @@ interface LabelEditorArgs {
 }
 
 interface ILabelEditorView extends IView {
-    updateLabels(): void
+    editorInitialized(): void;
+    updateLabels(): void;
 }
 
 class LabelEditorPresenter extends Presenter {
@@ -27,6 +28,7 @@ class LabelEditorPresenter extends Presenter {
     }
 
     setup(): void {
+        this.view.editorInitialized();
         this.view.updateLabels();
     }
 
@@ -130,6 +132,10 @@ class LabelEditorView extends View implements ILabelEditorView {
         return new LabelEditorPresenter(this, {
             labelTitles: this.collectLabelTitles()
         });
+    }
+
+    editorInitialized(): void {
+        this.sidebar.setAttribute('data-cycle-label-initialized', 'true');
     }
 
     updateLabels(): void {

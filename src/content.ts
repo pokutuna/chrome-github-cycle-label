@@ -2,8 +2,13 @@ import { LabelEditorView } from './components/LabelEditor'
 
 console.log('content.ts');
 
-let sidebar = document.querySelector('#partial-discussion-sidebar');
-if (sidebar) new LabelEditorView(sidebar.parentElement);
+const isEditable = document.querySelector('.label-select-menu') ? true : false;
+const sidebarInner = document.querySelector('#partial-discussion-sidebar');
+if (isEditable && sidebarInner) {
+    const sidebar = sidebarInner.parentElement;
+    if (sidebar.getAttribute('data-cycle-label-initialized') !== 'true')
+        new LabelEditorView(sidebar);
+}
 
 // const form = <HTMLFormElement>document.querySelector('.js-issue-sidebar-form');
 // let inputs = Array.prototype.slice.call(form.querySelectorAll('input'));
