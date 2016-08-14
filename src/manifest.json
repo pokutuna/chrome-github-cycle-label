@@ -13,8 +13,9 @@
     "permissions": [
         "http://*/*",
         "https://*/*",
+        "storage",
         "tabs",
-        "storage"
+        "webNavigation"
     ],
     "icons": {
         "16":  "img/cycle-label16.png",
