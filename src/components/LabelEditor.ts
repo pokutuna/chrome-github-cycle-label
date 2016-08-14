@@ -71,11 +71,11 @@ class LabelEditorView extends View implements ILabelEditorView {
 
     initMembers(sidebar: Element): void {
         this.sidebar = <HTMLElement>sidebar;
-        this.labelForm = <HTMLFormElement>this.sidebar.querySelector('.sidebar-labels form');
+        this.resetLabelForm();
     }
 
     registerEvents(): void {
-        this.sidebarObserver = new MutationObserver(this.onMutateSidebar.bind(this));
+        this.sidebarObserver = new MutationObserver(this.onMutate.bind(this));
         this.sidebarObserver.observe(this.sidebar, {
             childList: true,
             subtree:   true,
@@ -92,10 +92,17 @@ class LabelEditorView extends View implements ILabelEditorView {
     unregisterEvents(): void {
     }
 
-    private onMutateSidebar(mutations: MutationRecord[], observer: MutationObserver): void {
+    private resetLabelForm(): void {
+        // labelForm will be updated by pjax
+        this.labelForm = <HTMLFormElement>this.sidebar.querySelector(
+            '.sidebar-labels form'
+        );
+    }
+
+    private onMutate(mutations: MutationRecord[], observer: MutationObserver): void {
         if (this.isLabelFormMutated(mutations)) {
             console.log('Sidebar Updated');
-            this.labelForm = <HTMLFormElement>this.sidebar.querySelector('.sidebar-labels form');
+            this.resetLabelForm();
             this.presenter.handleLabelUpdate(this.collectLabelTitles());
         }
     }
@@ -105,7 +112,7 @@ class LabelEditorView extends View implements ILabelEditorView {
             const nodes = Array.prototype.slice.call(mutation.removedNodes);
             return nodes.some((node: Node) => {
                 if (node.nodeType != Node.ELEMENT_NODE) return false;
-                return (<Element>node).matches('#partial-discussion-sidebar') ? true : false;
+                return (<Element>node).matches('#partial-discussion-sidebar');
             });
         });
     }
