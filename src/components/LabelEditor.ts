@@ -1,4 +1,5 @@
-import * as $ from 'jquery';
+/// <reference path="../../typings/index.d.ts" />
+
 import { IView, Presenter, View } from './Base';
 import { Util } from './Util';
 
@@ -8,23 +9,36 @@ interface Label {
     isImitated: boolean;
 }
 
+interface LabelFormData {
+    method: string;
+    action: string;
+    params: [string, string][];
+}
+
 interface LabelEditorArgs {
     labelTitles: string[];
+    formData: LabelFormData;
 }
 
 interface ILabelEditorView extends IView {
     editorInitialized(): void;
     updateLabels(): void;
+    updateSidebarLabels(): void;
 }
 
 class LabelEditorPresenter extends Presenter {
     view: LabelEditorView;
+
+    formData: LabelFormData;
+    lastSidebarContent: string;
 
     labels: Label[];
 
     constructor(view: LabelEditorView, args: LabelEditorArgs) {
         super(view);
         this.WIPudpateLabels(args.labelTitles);
+        this.formData = args.formData;
+        this.lastSidebarContent = null;
     }
 
     setup(): void {
@@ -32,12 +46,53 @@ class LabelEditorPresenter extends Presenter {
         this.view.updateLabels();
     }
 
-    handleLabelUpdate(labelTitles: string[]): void {
+    handleFormUpdate(labelTitles: string[], formData: LabelFormData): void {
         this.WIPudpateLabels(labelTitles);
+        this.formData = formData;
         this.view.updateLabels();
     }
 
-    WIPudpateLabels(labelTitles: string[]): void {
+    addLabel(labelTitle: string): void {
+        const params = this.formData.params.concat(this.currentLabelParams());
+        params.push(['issue[labels][]', labelTitle]);
+        let encoded = params.map((kv: [string, string]) => {
+            return `${encodeURIComponent(kv[0])}=${encodeURIComponent(kv[1])}`;
+        }).join('&');
+
+        this.resetError();
+        this.postForm(encoded).then((res: Response) => {
+            return res.text();
+        }).then((text: string) => {
+            this.lastSidebarContent = text;
+            this.view.updateSidebarLabels();
+        }).catch((error: Error) => {
+            this.setError(error);
+            this.view.updateError();
+        });
+    }
+
+    private currentLabelParams(): [string, string][] {
+        const params: [string, string][] = [['issue[labels][]', '']];
+        this.labels.forEach((label: Label) => {
+            if (!label.isImitated) params.push(['issue[labels][]', label.title]);
+        });
+        return params;
+    }
+
+    private postForm(encodedParams: string): Promise<Response> {
+        return fetch(this.formData.action, {
+            method: this.formData.method,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: encodedParams,
+            credentials: 'include',
+            cache: 'no-cache',
+        });
+    }
+
+    private WIPudpateLabels(labelTitles: string[]): void {
         // https://github.com/pokutuna/chrome-github-cycle-label/issues/1
         this.labels = labelTitles.map((title: string) => {
             return {
@@ -81,10 +136,10 @@ class LabelEditorView extends View implements ILabelEditorView {
             subtree:   true,
         });
 
-        document.addEventListener('click', Util.delegate(
+        this.sidebar.addEventListener('click', Util.delegate(
             '.cycle-button', this.onClickCycleButton.bind(this)
         ));
-        document.addEventListener('click', Util.delegate(
+        this.sidebar.addEventListener('click', Util.delegate(
             '.imitation-label', this.onClickImitationLabel.bind(this)
         ));
     }
@@ -103,7 +158,10 @@ class LabelEditorView extends View implements ILabelEditorView {
         if (this.isLabelFormMutated(mutations)) {
             console.log('Sidebar Updated');
             this.resetLabelForm();
-            this.presenter.handleLabelUpdate(this.collectLabelTitles());
+            this.presenter.handleFormUpdate(
+                this.collectLabelTitles(),
+                this.collectLabelFormData()
+            );
         }
     }
 
@@ -125,6 +183,16 @@ class LabelEditorView extends View implements ILabelEditorView {
     private onClickImitationLabel(event: Event): void {
         event.preventDefault();
         console.log('onClickImitationLabel');
+        const labelTitle = (<HTMLElement>event.target).title;
+        this.presenter.addLabel(labelTitle);
+    }
+
+    private collectLabelFormData(): LabelFormData {
+        return {
+            method: this.labelForm.method,
+            action: this.labelForm.action,
+            params: Util.serializeArray(this.labelForm),
+        };
     }
 
     private collectLabelTitles(): string[] {
@@ -137,7 +205,8 @@ class LabelEditorView extends View implements ILabelEditorView {
 
     createPresenter(): LabelEditorPresenter {
         return new LabelEditorPresenter(this, {
-            labelTitles: this.collectLabelTitles()
+            labelTitles: this.collectLabelTitles(),
+            formData: this.collectLabelFormData(),
         });
     }
 
@@ -166,6 +235,15 @@ class LabelEditorView extends View implements ILabelEditorView {
                 // TODO abort extension
             }
         });
+    }
+
+    updateSidebarLabels(): void {
+        // XXX should be more strict
+        const isValid = this.presenter.lastSidebarContent.startsWith(
+            '<div class="discussion-sidebar-item sidebar-labels'
+        );
+
+        if (isValid) this.sidebar.querySelector('.sidebar-labels').innerHTML = this.presenter.lastSidebarContent;
     }
 
     private createCycleButton(title: string): HTMLButtonElement {
