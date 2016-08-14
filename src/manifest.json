@@ -14,8 +14,7 @@
         "http://*/*",
         "https://*/*",
         "storage",
-        "tabs",
-        "webNavigation"
+        "tabs"
     ],
     "icons": {
         "16":  "img/cycle-label16.png",
