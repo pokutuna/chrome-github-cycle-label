@@ -5,4 +5,35 @@ html(lang='en')
     link(rel='stylesheet' href='../css/options.css')
     script(src='../js/options.js')
   body
+    #icon
     h1 chrome-github-cycle-label
+
+    #config
+      h2 options
+      p#format JSON format: { repository_prefix: [ [label, label, label], [label, label] ] }
+      textarea#setting
+      button#save Save
+
+      #help
+        p example:
+        pre#example
+          | {
+          |   "https://github.com/": [
+          |     ["bug", "wontfix"],
+          |   ],
+          |   "https://github.com/pokutuna/chrome-github-cycle-label": [
+          |     ["foo", "bar", "baz"]
+          |   ],
+          |   "https://your.github.enterprise.host/": [
+          |     ["Review Request", "Reviewing", "Reviewed"],
+          |     ["discussion", "in progress", ""],
+          |   ]
+          | }
+
+    #link
+      h2 links
+      ul
+        li
+          a(href='#') TODO Chrome Web Store
+        li
+          a(href='https://github.com/pokutuna/chrome-github-cycle-label/') GitHub Repository

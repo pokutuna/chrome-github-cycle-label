@@ -1,1 +1,40 @@
 @charset "utf-8";
+
+$font-size: 16px;
+
+body {
+    font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    margin-left: 155px;
+}
+
+#icon {
+    background-image: url("../img/cycle-label128.png");
+    height: 52px;
+    background-position: 0 50%;
+    background-repeat: no-repeat;
+}
+
+textarea {
+    font-size: $font-size;
+    height: 8em;
+    width: 22em;
+}
+
+h1 { margin-top: 0px; }
+h2 { margin-bottom: 0.3em;  }
+#format { margin-bottom: 0.2em; }
+
+textarea {
+    font-size: $font-size;
+    height: 8em;
+    width: 22em;
+}
+button {
+    font-size: $font-size;
+    display: block;
+}
+
+#example {
+    font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    padding-left: 2em;
+}
