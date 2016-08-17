@@ -52,9 +52,23 @@ class LabelEditorPresenter extends Presenter {
         this.view.updateLabels();
     }
 
+    cycleLabel(labelTitle: string): void {
+        const labelParams = this.currentLabelParams().map(
+            (p: [string, string]): [string, string] => {
+                return p[1] === 'duplicate' ? [p[0], 'enhancement'] : p
+            }
+        );
+        this.requestUpdate(labelParams);
+    }
+
     addLabel(labelTitle: string): void {
-        const params = this.formData.params.concat(this.currentLabelParams());
-        params.push(['issue[labels][]', labelTitle]);
+        const labelParams = this.currentLabelParams();
+        labelParams.push(['issue[labels][]', labelTitle]);
+        this.requestUpdate(labelParams);
+    }
+
+    private requestUpdate(labelParams: [string, string][]): void {
+        const params = this.formData.params.concat(labelParams);
         let encoded = params.map((kv: [string, string]) => {
             return `${encodeURIComponent(kv[0])}=${encodeURIComponent(kv[1])}`;
         }).join('&');
@@ -178,6 +192,8 @@ class LabelEditorView extends View implements ILabelEditorView {
     private onClickCycleButton(event: Event): void {
         event.preventDefault();
         console.log('onClickCycleButton');
+        const labelTitle = (<HTMLElement>event.target).title;
+        this.presenter.cycleLabel(labelTitle);
     }
 
     private onClickImitationLabel(event: Event): void {
