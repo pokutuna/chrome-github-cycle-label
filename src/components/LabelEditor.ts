@@ -53,7 +53,7 @@ class LabelEditorPresenter extends Presenter {
     }
 
     cycleLabel(labelTitle: string): void {
-        const nexts = {
+        const nexts: { [index: string]: string } = {
             'duplicate': 'enhancement',
             'レビュー依頼': 'レビュー中',
             'レビュー中': 'レビュー済み',
