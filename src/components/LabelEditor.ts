@@ -53,9 +53,15 @@ class LabelEditorPresenter extends Presenter {
     }
 
     cycleLabel(labelTitle: string): void {
+        const nexts = {
+            'duplicate': 'enhancement',
+            'レビュー依頼': 'レビュー中',
+            'レビュー中': 'レビュー済み',
+            'レビュー済み': 'レビュー依頼',
+        };
         const labelParams = this.currentLabelParams().map(
             (p: [string, string]): [string, string] => {
-                return p[1] === 'duplicate' ? [p[0], 'enhancement'] : p
+                return nexts[p[1]] ? [p[0], nexts[p[1]]] : p;
             }
         );
         this.requestUpdate(labelParams);
@@ -108,15 +114,22 @@ class LabelEditorPresenter extends Presenter {
 
     private WIPudpateLabels(labelTitles: string[]): void {
         // https://github.com/pokutuna/chrome-github-cycle-label/issues/1
+        const cyclables = ['duplicate', 'レビュー依頼', 'レビュー中', 'レビュー済み'];
+
         this.labels = labelTitles.map((title: string) => {
             return {
                 title: title,
-                isCyclable: title === 'duplicate' ? true : false,
+                isCyclable: cyclables.indexOf(title) != -1 ? true : false,
                 isImitated: false,
             };
         });
         this.labels.push({
             title: 'テスト',
+            isCyclable: false,
+            isImitated: true,
+        });
+        this.labels.push({
+            title: 'レビュー依頼',
             isCyclable: false,
             isImitated: true,
         });
