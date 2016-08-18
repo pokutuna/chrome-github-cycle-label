@@ -1,5 +1,5 @@
 .sidebar-labels .labels .label.cycle-label {
-    margin-top: 3px;
+    margin-top: 3px; // TODO sibling selector
     width: 85%;
 }
 
@@ -10,11 +10,15 @@
     border: dashed 1px;
 }
 
-.sidebar-labels .cycle-button {
-    position: absolute;
-    margin-top: 3px;
-    right: 0;
-    &:after {
-        content: "→";
+.sidebar-labels {
+    .label + .cycle-button {
+        margin-top: 3px;
+    }
+    .cycle-button {
+        position: absolute;
+        right: 0;
+        &:after {
+            content: "→";
+        }
     }
 }
