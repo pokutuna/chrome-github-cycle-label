@@ -112,6 +112,8 @@ class ConfigEditorView extends View implements IConfigEditorView {
         const error = this.presenter.lastError;
         if (error) window.alert(error);
     }
+
+    // TODO handle input <Tab> to add 2 spaces
 }
 
 export { IConfigEditorView, ConfigEditorPresenter, ConfigEditorView };
