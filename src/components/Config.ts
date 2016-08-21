@@ -1,3 +1,5 @@
+/// <reference path="../../typings/index.d.ts" />
+
 interface ConfigData {
     hosts: { [index: string]: boolean };
     labelSetting: { [index: string]: string[][] };
@@ -36,6 +38,16 @@ class Config {
         } else {
             throw new Error('Invalid labelSetting');
         }
+    }
+
+    get chromeUrlFilter(): chrome.webNavigation.WebNavigationEventFilter {
+        const prefixes = Object.keys(this.labelSetting);
+        const filters: chrome.events.UrlFilter[] = [];
+        prefixes.forEach((p) => {
+            filters.push({ urlPrefix: p, pathContains: '/issues/' });
+            filters.push({ urlPrefix: p, pathContains: '/pull/'   });
+        });
+        return { url: filters };
     }
 
     // statics
