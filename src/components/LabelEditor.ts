@@ -1,10 +1,12 @@
 /// <reference path="../../typings/index.d.ts" />
 
 import { IView, Presenter, View } from './Base';
+import { Config } from './Config';
 import { Util } from './Util';
 
 interface Label {
     title: string;
+    nextTitle?: string;
     isCyclable: boolean;
     isImitated: boolean;
 }
@@ -16,6 +18,7 @@ interface LabelFormData {
 }
 
 interface LabelEditorArgs {
+    location: string;
     labelTitles: string[];
     formData: LabelFormData;
 }
@@ -29,52 +32,57 @@ interface ILabelEditorView extends IView {
 class LabelEditorPresenter extends Presenter {
     view: LabelEditorView;
 
+    location: string
     formData: LabelFormData;
     lastSidebarContent: string;
 
+    labelSetting: string[][];
     labels: Label[];
 
     constructor(view: LabelEditorView, args: LabelEditorArgs) {
         super(view);
-        this.WIPudpateLabels(args.labelTitles);
+        this.location = args.location;
         this.formData = args.formData;
         this.lastSidebarContent = null;
+
+        Config.getConfig().then((config: Config) => {
+            this.labelSetting = config.getLabelSettingByUrl(this.location);
+            this.parseLabels(args.labelTitles);
+            this.view.updateLabels();
+        });
     }
 
     setup(): void {
         this.view.editorInitialized();
-        this.view.updateLabels();
     }
 
     handleFormUpdate(labelTitles: string[], formData: LabelFormData): void {
-        this.WIPudpateLabels(labelTitles);
+        this.parseLabels(labelTitles);
         this.formData = formData;
         this.view.updateLabels();
     }
 
-    cycleLabel(labelTitle: string): void {
-        const nexts: { [index: string]: string } = {
-            'duplicate': 'enhancement',
-            'レビュー依頼': 'レビュー中',
-            'レビュー中': 'レビュー済み',
-            'レビュー済み': 'レビュー依頼',
-        };
-        const labelParams = this.currentLabelParams().map(
-            (p: [string, string]): [string, string] => {
-                return nexts[p[1]] ? [p[0], nexts[p[1]]] : p;
-            }
+    replaceLabelTitle(next: string, prev?: string): void {
+        let titles = this.labels
+            .filter((l: Label) => { return !l.isImitated })
+            .map((l: Label) => { return l.title });
+
+        if (prev) {
+            titles = titles.map((t: string) => { return t === prev ? next : t })
+        } else {
+            titles.push(next);
+        }
+
+        this.requestUpdate(titles);
+    }
+
+    private requestUpdate(titles: string[]): void {
+        console.log(titles);
+        const params = this.formData.params.concat(
+            [''].concat(titles).map((title: string): [string, string] => {
+                return ['issue[labels][]', title]
+            })
         );
-        this.requestUpdate(labelParams);
-    }
-
-    addLabel(labelTitle: string): void {
-        const labelParams = this.currentLabelParams();
-        labelParams.push(['issue[labels][]', labelTitle]);
-        this.requestUpdate(labelParams);
-    }
-
-    private requestUpdate(labelParams: [string, string][]): void {
-        const params = this.formData.params.concat(labelParams);
         let encoded = params.map((kv: [string, string]) => {
             return `${encodeURIComponent(kv[0])}=${encodeURIComponent(kv[1])}`;
         }).join('&');
@@ -91,14 +99,6 @@ class LabelEditorPresenter extends Presenter {
         });
     }
 
-    private currentLabelParams(): [string, string][] {
-        const params: [string, string][] = [['issue[labels][]', '']];
-        this.labels.forEach((label: Label) => {
-            if (!label.isImitated) params.push(['issue[labels][]', label.title]);
-        });
-        return params;
-    }
-
     private postForm(encodedParams: string): Promise<Response> {
         return fetch(this.formData.action, {
             method: this.formData.method,
@@ -112,30 +112,41 @@ class LabelEditorPresenter extends Presenter {
         });
     }
 
-    private WIPudpateLabels(labelTitles: string[]): void {
-        // https://github.com/pokutuna/chrome-github-cycle-label/issues/1
-        const cyclables = ['duplicate', 'レビュー依頼', 'レビュー中', 'レビュー済み'];
+    private parseLabels(labelTitles: string[]): void {
+        const labelSetting = this.labelSetting;
+        if (!labelSetting) return;
 
+        // parse existing label
+        const laneContainsIndex: { [index: number]: boolean } = {};
         this.labels = labelTitles.map((title: string) => {
+            let nextTitle: string   = null;
+            let isCyclable: boolean = false;
+            labelSetting.forEach((lane: string[], laneIdx: number) => {
+                const idx = lane.indexOf(title);
+                if (idx !== -1) { // found in a setting lane
+                    isCyclable = true;
+                    nextTitle = (idx + 1 !== lane.length) ? lane[idx + 1] : lane[0];
+                    laneContainsIndex[laneIdx] = true;
+                }
+            });
             return {
                 title: title,
-                isCyclable: cyclables.indexOf(title) != -1 ? true : false,
+                nextTitle: nextTitle,
+                isCyclable: isCyclable,
                 isImitated: false,
             };
         });
-        this.labels.push({
-            title: 'テスト',
-            isCyclable: false,
-            isImitated: true,
-        });
-        this.labels.push({
-            title: 'レビュー依頼',
-            isCyclable: false,
-            isImitated: true,
-        });
-    }
 
-    requestLabelUpdate(): void {
+        // add first item from not existing lane
+        labelSetting.forEach((lane: string[], laneIdx: number) => {
+            if (laneContainsIndex[laneIdx] && lane[0]) return;
+            this.labels.push({
+                title: lane[0],
+                nextTitle: lane[0],
+                isCyclable: false,
+                isImitated: true,
+            });
+        });
     }
 }
 
@@ -205,15 +216,21 @@ class LabelEditorView extends View implements ILabelEditorView {
     private onClickCycleButton(event: Event): void {
         event.preventDefault();
         console.log('onClickCycleButton');
-        const labelTitle = (<HTMLElement>event.target).title;
-        this.presenter.cycleLabel(labelTitle);
+        const elem = <HTMLElement>event.target;
+        this.presenter.replaceLabelTitle(
+            elem.getAttribute('data-next-title'),
+            elem.getAttribute('data-prev-title')
+        );
     }
 
     private onClickImitationLabel(event: Event): void {
         event.preventDefault();
         console.log('onClickImitationLabel');
-        const labelTitle = (<HTMLElement>event.target).title;
-        this.presenter.addLabel(labelTitle);
+        const elem = <HTMLElement>event.target;
+        this.presenter.replaceLabelTitle(
+            elem.getAttribute('data-next-title'),
+            null
+        );
     }
 
     private collectLabelFormData(): LabelFormData {
@@ -234,6 +251,7 @@ class LabelEditorView extends View implements ILabelEditorView {
 
     createPresenter(): LabelEditorPresenter {
         return new LabelEditorPresenter(this, {
+            location: window.location.href,
             labelTitles: this.collectLabelTitles(),
             formData: this.collectLabelFormData(),
         });
@@ -250,14 +268,11 @@ class LabelEditorView extends View implements ILabelEditorView {
             if (elem && label.title === elem.getAttribute('title')) {
                 if (label.isCyclable) {
                     elem.classList.toggle('cycle-label', true);
-                    elem.parentElement.insertBefore(
-                        this.createCycleButton(label.title),
-                        elem
-                    );
+                    elem.parentElement.insertBefore(this.createCycleButton(label), elem);
                 }
             } else if (elem === undefined) {
                 this.labelForm.querySelector('.labels').appendChild(
-                    this.createImitationLabel(label.title)
+                    this.createImitationLabel(label)
                 );
             } else {
                 console.error('Label unmatch!');
@@ -275,20 +290,21 @@ class LabelEditorView extends View implements ILabelEditorView {
         if (isValid) this.sidebar.querySelector('.sidebar-labels').innerHTML = this.presenter.lastSidebarContent;
     }
 
-    private createCycleButton(title: string): HTMLButtonElement {
+    private createCycleButton(label: Label): HTMLButtonElement {
         const button = document.createElement('button');
         button.classList.add('cycle-button');
-        button.setAttribute('data-label-title', title);
+        button.setAttribute('data-prev-title', label.title);
+        button.setAttribute('data-next-title', label.nextTitle);
         button.setAttribute('type', 'button');
         return button;
     }
 
-    private createImitationLabel(title: string): HTMLAnchorElement {
+    private createImitationLabel(label: Label): HTMLAnchorElement {
         const a = document.createElement('a');
         a.classList.add('label', 'imitation-label');
-        a.setAttribute('title', title);
+        a.setAttribute('data-next-title', label.nextTitle);
         a.setAttribute('href', '#');
-        a.innerText = title;
+        a.innerText = label.title;
         return a;
     }
 }

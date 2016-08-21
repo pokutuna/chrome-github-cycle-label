@@ -20,6 +20,15 @@ class Config {
         return this.data.labelSetting;
     }
 
+    getLabelSettingByUrl(url: string): string[][] {
+        // use longest match setting
+        const setting = this.labelSetting;
+        const key = Object.keys(setting)
+            .sort((a: string, b: string) => { return a.length <= b.length ? 1 : -1 })
+            .find((item: string) => { return url.startsWith(item) });
+        return setting[key];
+    }
+
     setLabelSetting(labelSetting: any): void {
         if (Config.isLabelSettingValid(labelSetting)) {
             this.data.labelSetting = labelSetting;
