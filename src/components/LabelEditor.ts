@@ -182,9 +182,6 @@ class LabelEditorView extends View implements ILabelEditorView {
         ));
     }
 
-    unregisterEvents(): void {
-    }
-
     private resetLabelForm(): void {
         // labelForm will be updated by pjax
         this.labelForm = <HTMLFormElement>this.sidebar.querySelector(
@@ -282,12 +279,13 @@ class LabelEditorView extends View implements ILabelEditorView {
     }
 
     updateSidebarLabels(): void {
-        // XXX should be more strict
-        const isValid = this.presenter.lastSidebarContent.startsWith(
-            '<div class="discussion-sidebar-item sidebar-labels'
-        );
-
-        if (isValid) this.sidebar.querySelector('.sidebar-labels').innerHTML = this.presenter.lastSidebarContent;
+        const temp = document.createElement('DIV');
+        temp.innerHTML = this.presenter.lastSidebarContent;
+        const labels = temp.querySelector('.sidebar-labels');
+        if (labels) {
+            const oldLabels = this.sidebar.querySelector('.sidebar-labels');
+            oldLabels.parentNode.replaceChild(labels, oldLabels);
+        }
     }
 
     private createCycleButton(label: Label): HTMLButtonElement {
