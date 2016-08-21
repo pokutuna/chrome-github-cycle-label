@@ -1,7 +1,6 @@
 /// <reference path="../../typings/index.d.ts" />
 
 interface ConfigData {
-    hosts: { [index: string]: boolean };
     labelSetting: { [index: string]: string[][] };
 }
 
@@ -21,25 +20,15 @@ class Config {
         return this.data.labelSetting;
     }
 
-    isHostEnabled(url: string): boolean {
-        const match = /^(\w+:\/\/[^\/]+)/.exec(url);
-        if (!match) return false;
-        return this.data.hosts[match[1]] ? true : false;
-    }
-
     setLabelSetting(labelSetting: any): void {
         if (Config.isLabelSettingValid(labelSetting)) {
             this.data.labelSetting = labelSetting;
-            this.data.hosts = {};
-            Object.keys(this.data.labelSetting).forEach((key: string) => {
-                const match = /^(\w+:\/\/[^\/]+)/.exec(key);
-                return this.data.hosts[match[1]] = true;
-            });
         } else {
             throw new Error('Invalid labelSetting');
         }
     }
 
+    // https://developer.chrome.com/extensions/events#filtered
     get chromeUrlFilter(): chrome.webNavigation.WebNavigationEventFilter {
         const prefixes = Object.keys(this.labelSetting);
         const filters: chrome.events.UrlFilter[] = [];
@@ -53,10 +42,7 @@ class Config {
     // statics
     private static get DEFAULT_CONFIG(): ConfigData {
         return {
-            hosts: { 'https://github.com': true },
-            labelSetting: {
-                'https://github.com': [ ["bug", "wontfix"] ]
-            }
+            labelSetting: { 'https://github.com': [ ["bug", "wontfix"] ] }
         }
     }
 
